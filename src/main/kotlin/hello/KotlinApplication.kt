@@ -63,7 +63,7 @@ class KotlinApplication(val writeCommittedStream: WriteCommittedStream) {
                 }
 
                 if (needRotate) {
-                    ServerResponse.ok().body(Mono.just("F"))
+                    ServerResponse.ok().body(Mono.just("R"))
                 } else if (myState.wasHit) {
                     ServerResponse.ok().body(Mono.just("F"))
                 } else if (enemyInRange) {

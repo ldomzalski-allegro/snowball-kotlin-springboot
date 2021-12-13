@@ -1,5 +1,6 @@
 package hello
 
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.runApplication
 import org.springframework.context.annotation.Bean
@@ -10,7 +11,8 @@ import org.springframework.web.reactive.function.server.router
 import reactor.core.publisher.Mono
 
 @SpringBootApplication
-class KotlinApplication {
+class KotlinApplication(val writeCommittedStream: WriteCommittedStream) {
+
 
     @Bean
     fun routes() = router {
@@ -21,7 +23,7 @@ class KotlinApplication {
         POST("/**", accept(APPLICATION_JSON)) { request ->
             request.bodyToMono(ArenaUpdate::class.java).flatMap { arenaUpdate ->
                 val myState = arenaUpdate.arena.state[arenaUpdate._links.self.href]
-
+                writeCommittedStream.send(arenaUpdate.arena)
                 println(arenaUpdate)
                 if(myState!!.wasHit){
                     ServerResponse.ok().body(Mono.just("F"))
@@ -36,6 +38,9 @@ class KotlinApplication {
 fun main(args: Array<String>) {
     runApplication<KotlinApplication>(*args)
 }
+
+
+
 
 data class ArenaUpdate(val _links: Links, val arena: Arena)
 data class PlayerState(val x: Int, val y: Int, val direction: String, val score: Int, val wasHit: Boolean)

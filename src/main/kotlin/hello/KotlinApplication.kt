@@ -1,6 +1,5 @@
 package hello
 
-import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.runApplication
 import org.springframework.context.annotation.Bean
@@ -25,10 +24,52 @@ class KotlinApplication(val writeCommittedStream: WriteCommittedStream) {
                 val myState = arenaUpdate.arena.state[arenaUpdate._links.self.href]
                 writeCommittedStream.send(arenaUpdate.arena)
                 println(arenaUpdate)
-                if(myState!!.wasHit){
+
+                var needRotate = false
+                var enemyInRange = false
+
+                arenaUpdate.arena.state.values.forEach { playerState ->
+                    when (myState!!.direction) {
+                        "N" -> {
+                            if (playerState.y < myState.y && playerState.y >= myState.y - 3 && playerState.x == myState.x) {
+                                enemyInRange = true
+                            }
+                        }
+                        "S" -> {
+                            if (playerState.y > myState.y && playerState.y <= myState.y + 3 && playerState.x == myState.x) {
+                                enemyInRange = true
+                            }
+                        }
+                        "W" -> {
+                            if (playerState.x < myState.x && playerState.x >= myState.x - 3 && playerState.y == myState.y) {
+                                enemyInRange = true
+                            }
+                        }
+                        "E" -> {
+                            if (playerState.x > myState.x && playerState.x <= myState.x + 3 && playerState.y == myState.y) {
+                                enemyInRange = true
+                            }
+                        }
+                    }
+                }
+                if (myState!!.y - 3 < 0) {
+                    needRotate = true
+                } else if (myState.y + 3 > arenaUpdate.arena.dims[1] - 1) {
+                    needRotate = true
+                } else if (myState.x - 3 < 0) {
+                    needRotate = true
+                } else if (myState.x + 3 > arenaUpdate.arena.dims[0] - 1) {
+                    needRotate = true
+                }
+
+                if (needRotate) {
                     ServerResponse.ok().body(Mono.just("F"))
-                }else{
-                    ServerResponse.ok().body(Mono.just(listOf("R", "T").random()))
+                } else if (myState.wasHit) {
+                    ServerResponse.ok().body(Mono.just("F"))
+                } else if (enemyInRange) {
+                    ServerResponse.ok().body(Mono.just("T"))
+                }else {
+                    ServerResponse.ok().body(Mono.just(listOf("R", "F").random()))
                 }
             }
         }
@@ -38,8 +79,6 @@ class KotlinApplication(val writeCommittedStream: WriteCommittedStream) {
 fun main(args: Array<String>) {
     runApplication<KotlinApplication>(*args)
 }
-
-
 
 
 data class ArenaUpdate(val _links: Links, val arena: Arena)
